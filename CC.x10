@@ -1,3 +1,8 @@
+import x10.util.concurrent.AtomicBoolean;
+import x10.util.Timer;
+import x10.util.Random; 
+
+
 /**
  * The transition relation is defined by:
  *
@@ -89,23 +94,181 @@
  */
 
 public class CC {
-  static def cc(d:Rail[Int],a:Rail[Rail[Int]]) {
-    val connections = Rail[ArrayList[Int]](d.size, (i:Int) => new ArrayList[Int]());
-    for (node in 0..(d.size-1)) {
-        connections(node).add(node);
-    }
-    for (node in connections) {
-      for (conn in connections(node)) {
-        if (< connections(node)(edge)) {
-          d(node) = a(node)(edge);
-          connections(node).add();
-          
+  static def cc(d:Rail[Int],a:Rail[Rail[Int]], size:Int, nworkers:Int) {
+    val done = new AtomicBoolean(false);
+    val step = (d.size < nworkers) ? 1 : (d.size / nworkers);
+    while (!done.get()) {
+      done.set(true);
+      finish for (var lower:Int = 0; lower < d.size; lower += step){
+        val l = lower;
+        val u = (lower + step >= d.size) ? d.size : (lower + step);
+        async for (node in l..(u-1)) {
+          for (adjacent in 0..(a(node).size-1)) {
+            if (d(a(node)(adjacent)) < d(node)) {
+              //Console.OUT.println("node " + node + " reduce " + d(a(node)(adjacent)) + " " + d(node));
+              d(node) = d(a(node)(adjacent));
+              done.set(false);
+            }
+          }
         }
       }
+      //Console.OUT.println(d.reduce((a:String, b:Int) => (a + " " + b), ""));
     }
   }
+  /*
+  public static def main(argv:Array[String]{self.rank==1})                         
+  {
+    val d = new Rail[Int](15, (i:Int) => i);
+    val a = new Rail[Rail[Int]](15, (i:Int) => new Rail[Int](1, 0));
+    for (i in 0..(a.size-1)) {
+        a(i)(0) = i + 2;
+    }
+    if (d.size % 2 == 0) {
+      a(d.size - 2)(0) = 1;
+      a(d.size - 1)(0) = 0;
+    } else {
+      a(d.size - 2)(0) = 0;
+      a(d.size - 1)(0) = 1;
+    }
+
+
+    cc(d, a);
+  }
+  */
+    static val rand = new Random(System.nanoTime());  
+    static struct Inputs
+    {
+        val size                :Int;                             // # of vertices in the graph
+    	val nworkers     :Int;				// # of workers in this test
+        val solutions     :Rail[Int];                    //  Result of the input
+        val Adjacency    :Rail[Rail[Int]];                  
+
+        def this(size: int, D: Rail[Int], A: Rail[Rail[Int]], asyncs: Int)
+        {
+            this.size          = size;
+            this.solutions     = D;
+            this.Adjacency    = A;
+	    this.nworkers    = asyncs;
+        }
+    }
+
+    private static def randomInput(size:Int)
+    {
+      val a = new Rail[Rail[Int]](size, (i:Int) => new Rail[Int](0));
+      for (i in 0..(size)) {
+          val o = rand.nextInt(size);
+          val r = rand.nextInt(size);
+          if (o == r) continue;
+          a(r) = new Rail[Int](a(r).size + 1, (i:Int) => i < a(r).size ? a(r)(i) : 0);
+          a(r)(a(r).size-1) = o;
+          a(o) = new Rail[Int](a(o).size + 1, (i:Int) => i < a(o).size ? a(o)(i) : 0);
+          a(o)(a(o).size-1) = r;
+      }
+      return a;
+    }
+
+    static val INPUT_COUNT = 1;
+    static val testIteration = 10;
+
+    public static def main(argv:Array[String]{self.rank==1})
+    {
+	if (argv.size != 1) {
+	    Console.ERR.println("USAGE: CCGraph <maxAsyncs>");
+	    return;
+	}
+	val asyncs = Int.parseInt(argv(0));
+	
+        val INPUTS = new Array[Inputs](0..(INPUT_COUNT - 1));
+	/**
+	 *     Currently the test cases are bogus - they are empty.
+	 *     True test cases will be available soon.. 
+	*/
+    val TEST_SIZE = 50000;
+
+    /*
+    val d = new Rail[Int](TEST_SIZE, (i:Int) => i);
+    val a = new Rail[Rail[Int]](TEST_SIZE, (i:Int) => new Rail[Int](1, 0));
+    val s = new Rail[Int](TEST_SIZE, (i:Int) => i % 2 == 0 ? 0 : 1);
+
+    for (i in 0..(a.size-1)) {
+        a(i)(0) = i + 2;
+    }
+    if (d.size % 2 == 1) {
+      a(d.size - 2)(0) = 1;
+      a(d.size - 1)(0) = 0;
+    } else {
+      a(d.size - 2)(0) = 0;
+      a(d.size - 1)(0) = 1;
+    }
+
+
+    var e:Rail[Int] = new Rail[Int](2);
+    e(0) = d.size/2 + 2;
+    e(1) = (d.size/2) % 2 == 0 ? 0 : 1;
+    a(d.size/2) = e;
+
+    e = new Rail[Int](2);
+    e(0) = d.size/3 + 2;
+    e(1) = (d.size/3) % 2 == 0 ? 0 : 1;
+    a(d.size/3) = e;
+
+    e = new Rail[Int](2);
+    e(0) = d.size/4 + 2;
+    e(1) = (d.size/4) % 2 == 0 ? 0 : 1;
+    a(d.size/4) = e;
+
+	val input0_A = a;
+    val input0_solutions = s;
+
+    */
+	INPUTS(0) = Inputs(TEST_SIZE, null, randomInput(TEST_SIZE), asyncs);
+
+	var exectimes: double = 0;
+
+	for (index in INPUTS)
+	{
+		exectimes = 0;
+		
+	
+		try
+		{
+			for (var i:Int=0; i<testIteration; i++)
+        		{
+				var solver: CC = new CC();        
+                val D = new Rail[Int](0..(INPUTS(index).size-1));
+                for(var z:Int=0; z<INPUTS(index).size; z++)
+                    D(z) = z;
+
+				val start     = Timer.milliTime();
+				solver.cc(D, INPUTS(index).Adjacency, INPUTS(index).size, INPUTS(index).nworkers);
+				val end       = Timer.milliTime();
+			    	var time_in_millis: long = end - start;
+
+                /*
+                for (y in 0..(D.size-1)) {
+                  if (D(y) != INPUTS(index).solutions(y))
+                  {
+                      Console.OUT.println("\tComputed answer: INCORRECT!!!!!!!!!!!!!!!!!!!!!");
+                      throw new Exception("Wrong answer");
+                  }
+                }
+                */
+
+				exectimes += time_in_millis;
+			}
+
+			Console.OUT.println("Avg time for test Input "+index+" is: "+exectimes / testIteration);
+		}
+
+		catch (BadPlaceException)
+        	{
+			Console.OUT.println();
+			Console.OUT.println("execution time " + "None ... answer was wrong.");
+     		}
+
+        }
+
+    }
+
 }
-2 - 2
-3 - 6
-4 - 4 * 3 -  12
-5 - 5 * 4 - 20
+
