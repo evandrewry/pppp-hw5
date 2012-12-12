@@ -1,0 +1,13 @@
+Evan Drewry
+COMS 4130 HW5/6
+
+Solutions to part 1 are at the top of CC.x10
+
+To compile, just run make.
+
+Each class has a main method included that tests functionality.
+
+The ./harness bash script tests CC.x10 with random inputs and
+parallelism of 1, 2, 4, 8, and 16 workers.
+
+

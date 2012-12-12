@@ -67,13 +67,16 @@ import x10.util.Random;
  * This is true. Production rules (II) and (III) produce all pairs
  * of connected nodes where the second node in the pair is of lower
  * id than the first. Therefore, when the execution sequence terminates,
- * the minimum value of Y for all n(X,Y) will be C.
+ * Y for all n(X,Y) will be C, the id of the node in A connected to X
+ * s.t. no node connected to X in A has lower id.
  *
  * Q4: Provide the tightest upper bound you can for the run-time of the
  * algorithm, in terms of number of transitions, assuming the initial
  * graph has N nodes and E edges. (Do not go overboard, O(N^2) is
  * acceptable compared to O(N^1.73565), and O(log(N)) is acceptable 
  * compared to O(log(log(N))).)
+ *
+ * The algorithm runs in O(NE) time
  *
  * Q5: Implement the following method in X10 to compute the connected components
  * of a graph -- feel free to use whatever ideas you may have gleaned
@@ -169,8 +172,8 @@ public class CC {
 
     static val INPUT_COUNT = 5;
     static val testIteration = 10;
-    static val TEST_SIZE = 75000;
-    static val NUM_EDGES = TEST_SIZE;
+    static val TEST_SIZE = 10000;
+    static val NUM_EDGES = 1000000;
 
     public static def main(argv:Array[String]{self.rank==1})
     {

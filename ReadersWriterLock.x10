@@ -1,6 +1,28 @@
 import x10.util.concurrent.AtomicInteger;
 import x10.io.Console;
 
+/*
+ * P1: No thread shall starve attempting to acquire the lock.
+ *
+ * The threads are served in FCFS order, so starvation is
+ * impossible.
+ *
+ * P2: Concurrent reads may proceed in parallel
+ *
+ * readLock() returns on the condition that there are no writers
+ * writing or waiting, so if there are no writers but there are
+ * other readers, the reads may proceed concurrently
+ *
+ *
+ * P3: Writes are mutually exclusive with all other accesses.
+ *
+ * writeLock() only returns when there are no other writers or
+ * readers, and readLock() cannot return when there are writers
+ * or waiting writers, so writes must be mutually exclusive with
+ * all other accesses
+ *
+ *
+ */
 public class ReadersWriterLock {
     val readers:AtomicInteger = new AtomicInteger(0);
     val writers:AtomicInteger = new AtomicInteger(0);
