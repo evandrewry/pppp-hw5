@@ -4,7 +4,7 @@ import x10.io.Console;
 public class ReadersWriterLock {
     val readers:AtomicInteger = new AtomicInteger(0);
     val writers:AtomicInteger = new AtomicInteger(0);
-    val wwaiters:AtomicInteger = new AtomicInteger(0);
+    val waiters:AtomicInteger = new AtomicInteger(0);
 
     public def lock(i:Int, w:Boolean)
     {
@@ -14,21 +14,19 @@ public class ReadersWriterLock {
 
     private def writeLock(i:Int)
     {
-        wwaiters.incrementAndGet();
+        waiters.incrementAndGet();
         while (true) {
             atomic if (writers.get() == 0 && readers.get() == 0) {
-                if (rwaiters.get() == 0 || turn == true) {
-                  writers.incrementAndGet();
-                  break;
-                }
+                writers.incrementAndGet();
+                break;
             }
         }
-        wwaiters.decrementAndGet();
+        waiters.decrementAndGet();
     }
 
     private def readLock(i:Int)
     {
-        while (writers.get() > 0 || wwaiters.get() > 0);
+        while (writers.get() > 0 || waiters.get() > 0);
         readers.incrementAndGet();
     }
 

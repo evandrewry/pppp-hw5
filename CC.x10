@@ -152,10 +152,10 @@ public class CC {
         }
     }
 
-    private static def randomInput(size:Int)
+    private static def randomInput(size:Int, edges:Int)
     {
       val a = new Rail[Rail[Int]](size, (i:Int) => new Rail[Int](0));
-      for (i in 0..(size)) {
+      for (i in 0..edges) {
           val o = rand.nextInt(size);
           val r = rand.nextInt(size);
           if (o == r) continue;
@@ -167,108 +167,63 @@ public class CC {
       return a;
     }
 
-    static val INPUT_COUNT = 1;
+    static val INPUT_COUNT = 5;
     static val testIteration = 10;
+    static val TEST_SIZE = 75000;
+    static val NUM_EDGES = TEST_SIZE;
 
     public static def main(argv:Array[String]{self.rank==1})
     {
-	if (argv.size != 1) {
-	    Console.ERR.println("USAGE: CCGraph <maxAsyncs>");
-	    return;
-	}
-	val asyncs = Int.parseInt(argv(0));
-	
-        val INPUTS = new Array[Inputs](0..(INPUT_COUNT - 1));
-	/**
-	 *     Currently the test cases are bogus - they are empty.
-	 *     True test cases will be available soon.. 
-	*/
-    val TEST_SIZE = 50000;
+      if (argv.size != 1) {
+          Console.ERR.println("USAGE: CCGraph <maxAsyncs>");
+          return;
+      }
+      val asyncs = Int.parseInt(argv(0));
+      var solver: CC = new CC();        
+      
+      val INPUTS = new Array[Inputs](0..(INPUT_COUNT - 1));
 
-    /*
-    val d = new Rail[Int](TEST_SIZE, (i:Int) => i);
-    val a = new Rail[Rail[Int]](TEST_SIZE, (i:Int) => new Rail[Int](1, 0));
-    val s = new Rail[Int](TEST_SIZE, (i:Int) => i % 2 == 0 ? 0 : 1);
+      for (i in INPUTS) {
+        val graph = randomInput(TEST_SIZE, NUM_EDGES);
+        val d = new Rail[Int](TEST_SIZE, (i:Int) => i);
+        solver.cc(d, graph, TEST_SIZE, 1);
+        INPUTS(i) = Inputs(TEST_SIZE, d, graph, asyncs);
+      }
+      var exectimes: double = 0;
 
-    for (i in 0..(a.size-1)) {
-        a(i)(0) = i + 2;
-    }
-    if (d.size % 2 == 1) {
-      a(d.size - 2)(0) = 1;
-      a(d.size - 1)(0) = 0;
-    } else {
-      a(d.size - 2)(0) = 0;
-      a(d.size - 1)(0) = 1;
-    }
+      for (index in INPUTS) {
+        exectimes = 0;
+        
+        try {
+          for (var i:Int=0; i<testIteration; i++) {
+            val D = new Rail[Int](0..(INPUTS(index).size-1));
+            for(var z:Int=0; z<INPUTS(index).size; z++)
+                D(z) = z;
 
+            val start = Timer.milliTime();
+            solver.cc(D, INPUTS(index).Adjacency, INPUTS(index).size, INPUTS(index).nworkers);
+            val end = Timer.milliTime();
+            var time_in_millis: long = end - start;
 
-    var e:Rail[Int] = new Rail[Int](2);
-    e(0) = d.size/2 + 2;
-    e(1) = (d.size/2) % 2 == 0 ? 0 : 1;
-    a(d.size/2) = e;
+            for (y in 0..(D.size-1)) {
+              if (D(y) != INPUTS(index).solutions(y))
+              {
+                  Console.OUT.println("\tComputed answer: INCORRECT!!!!!!!!!!!!!!!!!!!!!");
+                  throw new Exception("Wrong answer");
+              }
+            }
 
-    e = new Rail[Int](2);
-    e(0) = d.size/3 + 2;
-    e(1) = (d.size/3) % 2 == 0 ? 0 : 1;
-    a(d.size/3) = e;
+            exectimes += time_in_millis;
+          }
 
-    e = new Rail[Int](2);
-    e(0) = d.size/4 + 2;
-    e(1) = (d.size/4) % 2 == 0 ? 0 : 1;
-    a(d.size/4) = e;
-
-	val input0_A = a;
-    val input0_solutions = s;
-
-    */
-	INPUTS(0) = Inputs(TEST_SIZE, null, randomInput(TEST_SIZE), asyncs);
-
-	var exectimes: double = 0;
-
-	for (index in INPUTS)
-	{
-		exectimes = 0;
-		
-	
-		try
-		{
-			for (var i:Int=0; i<testIteration; i++)
-        		{
-				var solver: CC = new CC();        
-                val D = new Rail[Int](0..(INPUTS(index).size-1));
-                for(var z:Int=0; z<INPUTS(index).size; z++)
-                    D(z) = z;
-
-				val start     = Timer.milliTime();
-				solver.cc(D, INPUTS(index).Adjacency, INPUTS(index).size, INPUTS(index).nworkers);
-				val end       = Timer.milliTime();
-			    	var time_in_millis: long = end - start;
-
-                /*
-                for (y in 0..(D.size-1)) {
-                  if (D(y) != INPUTS(index).solutions(y))
-                  {
-                      Console.OUT.println("\tComputed answer: INCORRECT!!!!!!!!!!!!!!!!!!!!!");
-                      throw new Exception("Wrong answer");
-                  }
-                }
-                */
-
-				exectimes += time_in_millis;
-			}
-
-			Console.OUT.println("Avg time for test Input "+index+" is: "+exectimes / testIteration);
-		}
-
-		catch (BadPlaceException)
-        	{
-			Console.OUT.println();
-			Console.OUT.println("execution time " + "None ... answer was wrong.");
-     		}
-
+          Console.OUT.println("Avg time for test Input "+index+" is: "+exectimes / testIteration);
         }
 
+        catch (Exception) {
+            Console.OUT.println();
+            Console.OUT.println("execution time " + "None ... answer was wrong.");
+        }
+      }
     }
-
 }
 
